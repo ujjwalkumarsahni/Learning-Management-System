@@ -1,5 +1,7 @@
 import { Webhook } from "svix";
 import User from "../Models/User.js";
+import Stripe from "stripe";
+
 
 // Function to manage Clerk User with Database
 export const clerkWebhooks = async (req, res) => {
@@ -46,3 +48,9 @@ export const clerkWebhooks = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+const stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY)
+
+export const stripeWebhooks = async (request,response) =>{
+
+}
