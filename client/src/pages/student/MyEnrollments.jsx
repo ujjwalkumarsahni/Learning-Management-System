@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { AppContext } from '../../context/AppContext'
 import { Line } from 'rc-progress'
+import axios from 'axios'
 
 const MyEnrollments = () => {
   const { enrolledCourses, CalculateCourseDuration, navigate, backendUrl, userData, getToken, CalculateNoOfLecture, fetchEnrolledCourses } = useContext(AppContext)
