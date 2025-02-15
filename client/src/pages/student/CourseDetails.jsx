@@ -6,6 +6,8 @@ import humanizeDuration from "humanize-duration";
 import Footer from "../../components/student/Footer";
 import YouTube from 'react-youtube';
 import Loading from "../../components/student/Loading";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 
 const CourseDetails = () => {
@@ -22,12 +24,62 @@ const CourseDetails = () => {
     CalculateCourseDuration,
     CalculateNoOfLecture,
     currency,
+    backendUrl,
+    userData,
+    getToken
   } = useContext(AppContext);
 
+  const fetchCourseData = async () => {
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/course/${id}`)
+
+      if (data.success) {
+        setCourseData(data.courseData)
+      } else {
+        toast.error(data.message)
+        console.log(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message)
+      console.log(error);
+    }
+  }
+
+  const enrolledCourse = async () => {
+    try {
+      if (!userData) {
+        return toast.warn('Please login to enroll course')
+      }
+      if (isAlreadyEnrolled) {
+        return toast.warn("Already Enrolled")
+      }
+
+      const token = await getToken()
+
+      const { data } = await axios.post(`${backendUrl}/api/user/purchase`,{courseId: courseData._id},{ headers: { Authorization: `Bearer ${token}` } })
+
+      if(data.success){
+        const {session_url} = data
+        window.location.replace(session_url)
+      }else{
+        toast.error(data.message)
+      }
+
+    } catch (error) {
+      toast.error(error.message)
+      console.log(error);
+    }
+  }
+
   useEffect(() => {
-    const findCourse = allCourses.find((course) => course._id === id);
-    setCourseData(findCourse);
-  }, [id, allCourses]);
+    fetchCourseData()
+  }, []);
+
+  useEffect(() => {
+    if (userData && courseData) {
+      setIsAlreadyEnrolled(userData.enrolledCourses.includes(courseData._id))
+    }
+  }, [userData, courseData]);
 
   const toggleSection = (index) => {
     setOpenSection((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -81,7 +133,7 @@ const CourseDetails = () => {
             </p>
           </div>
           <p className="text-sm">
-            Course by <span className="text-blue-600 underline">LearnFlow</span>
+            Course by <span className="text-blue-600 underline">{courseData.educator.name}</span>
           </p>
 
           <div className="text-gray-800 pt-8">
@@ -215,7 +267,7 @@ const CourseDetails = () => {
 
             </div>
 
-            <button className="md:mt-6 mt-4 w-full py-3 rounded bg-blue-600 text-white font-medium">{isAlreadyEnrolled ? 'Already Enrolled' : 'Enroll Now'}</button>
+            <button onClick={enrolledCourse} className="md:mt-6 mt-4 w-full py-3 rounded bg-blue-600 text-white font-medium">{isAlreadyEnrolled ? 'Already Enrolled' : 'Enroll Now'}</button>
 
             <div className="pt-6">
               <p className="md:text-xl text-lg font-medium text-gray-800">What’s in the course?</p>
