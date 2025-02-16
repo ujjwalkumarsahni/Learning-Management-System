@@ -1,6 +1,8 @@
 import {clerkClient} from '@clerk/express'
 import Course from './../Models/Course.js';
 import {v2 as cloudinary} from 'cloudinary'
+import Purchase from './../Models/Purchase.js';
+import User from './../Models/User.js';
 
 // update role to educator
 export const updateRoleToEducator = async (req,res) =>{
@@ -27,27 +29,38 @@ export const updateRoleToEducator = async (req,res) =>{
 // Add new Course
 export const addCourse = async (req,res) =>{
     try {
-        const {courseData} = req.body
-        const imageFile = req.file
-        const educatorId = req.auth.body
+        const { courseData } = req.body;
+        const imageFile = req.file;
 
-        if(!imageFile){
-            return res.json({success: false,message: "Thumbnail Not Attached"})
+        // Extract educator ID from authentication middleware
+        const educatorId = req.auth?.userId || req.auth?.id;
+
+        if (!educatorId) {
+            return res.status(400).json({ success: false, message: "Educator ID is missing" });
         }
 
-        const parsedCourseData = await JSON.parse(courseData)
-        parsedCourseData.educator = educatorId
-        const newCourse = await Course.create(parsedCourseData)
+        if (!imageFile) {
+            return res.status(400).json({ success: false, message: "Thumbnail Not Attached" });
+        }
 
-        const imageUpload = await cloudinary.uploader.upload(imageFile.path)
-        newCourse.courseThumbnail = imageUpload.secure_url
-        
-        await newCourse.save()
+        // Parse the course data
+        const parsedCourseData = JSON.parse(courseData);
+        parsedCourseData.educator = educatorId; // Assign educator ID
 
-        res.json({success: true,message: "Course Added"})
+        // Create new course
+        const newCourse = await Course.create(parsedCourseData);
+
+        // Upload image to Cloudinary
+        const imageUpload = await cloudinary.uploader.upload(imageFile.path);
+        newCourse.courseThumbnail = imageUpload.secure_url;
+
+        await newCourse.save();
+
+        res.json({ success: true, message: "Course Added", course: newCourse });
 
     } catch (error) {
-        res.json({success: false,message: error.message})
+        console.error("Error adding course:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -55,7 +68,7 @@ export const addCourse = async (req,res) =>{
 export const getEducatorCourses = async (req,res) =>{
     try {
        const educator = req.auth.userId
-       const courses = await course.find({educator})
+       const courses = await Course.find({educator})
        res.json({success: true, courses})
         
     } catch (error) {
@@ -68,10 +81,10 @@ export const getEducatorCourses = async (req,res) =>{
 export const educatorDashboardData = async (req,res) =>{
     try {
         const educator = req.auth.userId
-       const courses = await course.find({educator})
+       const courses = await Course.find({educator})
        const totalCourses = courses.length
 
-       const courseIds = course.map(course => course._id)
+       const courseIds = courses.map(course => course._id)
 
        const purchases = await Purchase.find({
         courseId: {$in: courseIds},
@@ -83,7 +96,7 @@ export const educatorDashboardData = async (req,res) =>{
        const enrolledStudentsData = []
        for(const course of courses){
         const students = await User.find({
-            id: {$in: course.enrolledStudents}
+            _id: {$in: course.enrolledStudents}
         },'name imageUrl')
 
         students.forEach(student => {
@@ -108,9 +121,9 @@ export const getEnrolledStudentsData = async (req,res) => {
     try {
 
        const educator = req.auth.userId
-       const courses = await course.find({educator})
+       const courses = await Course.find({educator})
 
-       const courseIds = course.map(course => course._id)
+       const courseIds = courses.map(course => course._id)
 
        const purchases = await Purchase.find({
         courseId: {$in: courseIds},

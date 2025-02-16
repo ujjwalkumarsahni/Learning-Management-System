@@ -1,18 +1,33 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { AppContext } from '../../context/AppContext'
 import Loading from '../../components/student/Loading'
+import { toast } from 'react-toastify'
+import axios from 'axios'
 
 const MyCourses = () => {
-  const {currency,allCourses} = useContext(AppContext)
-  const [courses,setCourses] = useState(null)
+  const { currency, backendUrl, getToken, isEducator } = useContext(AppContext)
+  const [courses, setCourses] = useState(null)
 
   const fetchEducatorCourses = async () => {
-    setCourses(allCourses)
+    try {
+      const token = await getToken()
+      console.log(token);
+      
+
+      const { data } = await axios.get(`${backendUrl}/api/educator/courses`, { headers: { Authorization: `Bearer ${token}` } })
+
+      data.success && setCourses(data.courses)
+
+    } catch (error) {
+      toast.error(error.message)
+    }
   }
 
-  useEffect(()=>{
-    fetchEducatorCourses()
-  },[allCourses])
+  useEffect(() => {
+    if(isEducator){
+      fetchEducatorCourses()
+    }
+  }, [isEducator])
 
   return courses ? (
     <div className='h-screen flex flex-col items-start justify-between md:p-8 md:pb-0 p-4 pt-8 pb-0'>
@@ -22,22 +37,22 @@ const MyCourses = () => {
           <table className='md:table-auto table-fixed w-full overflow-hidden'>
             <thead className='text-gray-900 border-b border-gray-500/20 text-sm text-left'>
               <tr>
-              <th className='px-3 py-3 font-semibold truncate'>All Courses</th>
-              <th className='px-3 py-3 font-semibold truncate'>Earnings</th>
-              <th className='px-3 py-3 font-semibold truncate'>Students</th>
-              <th className='px-3 py-3 font-semibold truncate'>Published On</th>
+                <th className='px-3 py-3 font-semibold truncate'>All Courses</th>
+                <th className='px-3 py-3 font-semibold truncate'>Earnings</th>
+                <th className='px-3 py-3 font-semibold truncate'>Students</th>
+                <th className='px-3 py-3 font-semibold truncate'>Published On</th>
               </tr>
             </thead>
-            <tbody className='text-sm text-gray-500'> 
+            <tbody className='text-sm text-gray-500'>
               {
                 courses.map((course, idx) => (
                   <tr key={course._id} className='border-b border-gray-500/20'>
                     <td className='md:px-4 pl-2 md:pl-4 py-3 flex items-center space-x-3 truncate'>
-                      <img src={course.courseThumbnail} alt="" className='w-16'/>
+                      <img src={course.courseThumbnail} alt="" className='w-16' />
                       <span className='truncate hidden md:block'>{course.courseTitle}</span>
                     </td>
                     <td className='px-4 py-3'>
-                      {currency} {Math.floor(course.enrolledStudents.length * (course.coursePrice -course.discount * course.coursePrice / 100))}
+                      {currency} {Math.floor(course.enrolledStudents.length * (course.coursePrice - course.discount * course.coursePrice / 100))}
                     </td>
                     <td className='px-4 py-3'>
                       {course.enrolledStudents.length}
@@ -52,7 +67,7 @@ const MyCourses = () => {
           </table>
         </div>
       </div>
-      
+
     </div>
   ) : <Loading />
 }

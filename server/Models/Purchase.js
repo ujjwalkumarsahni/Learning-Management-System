@@ -12,7 +12,7 @@ const purchaseSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
-    aount: {
+    amount: {
         type: Number,
         required: true
     },
